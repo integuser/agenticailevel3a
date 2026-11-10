@@ -1,0 +1,48 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant FE as Frontend<br/>(script.js)
+    participant API as FastAPI<br/>(app.py)
+    participant RAG as RAGSystem<br/>(rag_system.py)
+    participant SM as SessionManager
+    participant AI as AIGenerator<br/>(ai_generator.py)
+    participant Claude as Claude API
+    participant TM as ToolManager /<br/>CourseSearchTool
+    participant VS as VectorStore<br/>(ChromaDB)
+
+    User->>FE: Type question
+    FE->>API: POST /api/query {query, session_id?}
+    opt no session_id
+        API->>SM: create_session()
+        SM-->>API: session_id
+    end
+    API->>RAG: query(query, session_id)
+    RAG->>SM: get_conversation_history(session_id)
+    SM-->>RAG: last 2 messages
+    RAG->>AI: generate_response(prompt, history, tools, tool_manager)
+
+    AI->>Claude: messages.create (system prompt + history, tools, temp=0)
+    alt stop_reason != tool_use (general question)
+        Claude-->>AI: answer text
+    else stop_reason == tool_use (course question)
+        Claude-->>AI: tool_use search_course_content(query, course_name?, lesson_number?)
+        AI->>TM: execute_tool(name, **input)
+        TM->>VS: search(query, course_name, lesson_number)
+        opt course_name given
+            VS->>VS: query course_catalog (n=1) to resolve title
+        end
+        VS->>VS: build where-filter (course_title / lesson_number)
+        VS->>VS: query course_content (n=5, MiniLM embeddings)
+        VS-->>TM: SearchResults (documents + metadata)
+        TM->>TM: format "[Course - Lesson N] chunk", record last_sources
+        TM-->>AI: formatted results
+        AI->>Claude: messages.create (original + tool_use + tool_result, no tools)
+        Claude-->>AI: final answer text
+    end
+
+    AI-->>RAG: answer
+    RAG->>TM: get_last_sources() then reset_sources()
+    RAG->>SM: add_exchange(session_id, query, answer)
+    RAG-->>API: (answer, sources)
+    API-->>FE: {answer, sources, session_id}
+    FE-->>User: Render answer + collapsible Sources
