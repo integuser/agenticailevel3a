@@ -29,6 +29,8 @@ function setupEventListeners() {
         if (e.key === 'Enter') sendMessage();
     });
     
+    setupThemeToggle();
+
     document.getElementById('newChatButton').addEventListener('click', startNewChat);
 
     // Suggested questions
@@ -226,4 +228,25 @@ async function loadCourseStats() {
             courseTitles.innerHTML = '<span class="error">Failed to load courses</span>';
         }
     }
+}
+
+// Theme toggle (dark/light), persisted in localStorage
+function setupThemeToggle() {
+    const toggle = document.getElementById('themeToggle');
+    const root = document.documentElement;
+
+    const apply = (theme) => {
+        root.setAttribute('data-theme', theme);
+        toggle.setAttribute('aria-label', theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+        toggle.setAttribute('aria-pressed', theme === 'light');
+    };
+
+    apply(root.getAttribute('data-theme') || 'dark');
+
+    // Native <button> handles Enter/Space activation
+    toggle.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        apply(next);
+        localStorage.setItem('theme', next);
+    });
 }
