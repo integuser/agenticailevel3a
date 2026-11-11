@@ -125,12 +125,34 @@ function addMessage(content, type, sources = null, isWelcome = false) {
         html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+                <div class="sources-content"></div>
             </details>
         `;
     }
-    
+
     messageDiv.innerHTML = html;
+
+    if (sources && sources.length > 0) {
+        const container = messageDiv.querySelector('.sources-content');
+        sources.forEach((src, i) => {
+            if (i > 0) container.appendChild(document.createTextNode(', '));
+            // Tolerate legacy plain-string sources
+            const text = typeof src === 'string' ? src : src.text;
+            const url = typeof src === 'string' ? null : src.url;
+            let node;
+            if (url) {
+                node = document.createElement('a');
+                node.href = url;
+                node.target = '_blank';
+                node.rel = 'noopener noreferrer';
+            } else {
+                node = document.createElement('span');
+            }
+            node.textContent = text;
+            container.appendChild(node);
+        });
+    }
+
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     

@@ -88,24 +88,34 @@ class CourseSearchTool(Tool):
     def _format_results(self, results: SearchResults) -> str:
         """Format search results with course and lesson context"""
         formatted = []
-        sources = []  # Track sources for the UI
-        
+        sources = []  # Track sources for the UI: {"text", "url"}
+        seen = set()
+        link_cache = {}
+
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
-            
+
             # Build context header
             header = f"[{course_title}"
             if lesson_num is not None:
                 header += f" - Lesson {lesson_num}"
             header += "]"
-            
-            # Track source for the UI
+
+            # Track source for the UI (deduped by text)
             source = course_title
             if lesson_num is not None:
                 source += f" - Lesson {lesson_num}"
-            sources.append(source)
-            
+            if source not in seen:
+                seen.add(source)
+                url = None
+                if lesson_num is not None:
+                    key = (course_title, lesson_num)
+                    if key not in link_cache:
+                        link_cache[key] = self.store.get_lesson_link(course_title, lesson_num)
+                    url = link_cache[key]
+                sources.append({"text": source, "url": url})
+
             formatted.append(f"{header}\n{doc}")
         
         # Store sources for retrieval
