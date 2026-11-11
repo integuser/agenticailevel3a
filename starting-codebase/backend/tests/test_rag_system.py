@@ -9,8 +9,8 @@ from tests.conftest import make_response, text_block, tool_use_block
 
 def build():
     from rag_system import RAGSystem
-    with patch("rag_system.AIGenerator") as gen_cls, \
-         patch("rag_system.VectorStore"):
+
+    with patch("rag_system.AIGenerator") as gen_cls, patch("rag_system.VectorStore"):
         rag = RAGSystem(config)
     return rag, gen_cls.return_value
 
@@ -20,7 +20,10 @@ def test_query_passes_tools_and_manager():
     gen.generate_response.return_value = "ans"
     resp, sources = rag.query("what is MCP")
     kw = gen.generate_response.call_args.kwargs
-    assert {t["name"] for t in kw["tools"]} == {"search_course_content", "get_course_outline"}
+    assert {t["name"] for t in kw["tools"]} == {
+        "search_course_content",
+        "get_course_outline",
+    }
     assert kw["tool_manager"] is rag.tool_manager
     assert resp == "ans" and sources == []
 
@@ -31,6 +34,7 @@ def test_sources_returned_then_reset():
     def fake(**kw):
         rag.search_tool.last_sources = [{"text": "C - Lesson 1", "url": None}]
         return "ans"
+
     gen.generate_response.side_effect = fake
     _, sources = rag.query("q")
     assert sources == [{"text": "C - Lesson 1", "url": None}]
@@ -54,6 +58,7 @@ def test_generator_exception_propagates():
 
 def _real_rag(real_store):
     from rag_system import RAGSystem
+
     with patch("rag_system.VectorStore", return_value=real_store):
         return RAGSystem(config)
 
@@ -63,11 +68,14 @@ def test_end_to_end_fake_anthropic(real_store):
     client = MagicMock()
     client.messages.create.side_effect = [
         make_response([tool_use_block(input={"query": "what is MCP"})], "tool_use"),
-        make_response([text_block("MCP is ...")])]
+        make_response([text_block("MCP is ...")]),
+    ]
     rag.ai_generator.client = client
     resp, sources = rag.query("what is MCP")
     assert resp == "MCP is ..."
-    tool_result = client.messages.create.call_args_list[1].kwargs["messages"][2]["content"][0]["content"]
+    tool_result = client.messages.create.call_args_list[1].kwargs["messages"][2][
+        "content"
+    ][0]["content"]
     assert not tool_result.startswith("Search error")
     assert sources
 

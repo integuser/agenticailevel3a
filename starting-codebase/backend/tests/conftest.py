@@ -16,7 +16,9 @@ def text_block(text):
 
 
 def tool_use_block(name="search_course_content", input=None, id="toolu_1"):
-    return SimpleNamespace(type="tool_use", name=name, input=input or {"query": "mcp"}, id=id)
+    return SimpleNamespace(
+        type="tool_use", name=name, input=input or {"query": "mcp"}, id=id
+    )
 
 
 def make_response(content, stop_reason="end_turn"):
@@ -29,6 +31,7 @@ def real_store():
     if not os.path.isdir(CHROMA_PATH):
         pytest.skip("chroma_db missing")
     from vector_store import VectorStore
+
     store = VectorStore(CHROMA_PATH, "all-MiniLM-L6-v2", 5)
     if store.course_content.count() == 0:
         pytest.skip("chroma_db empty")

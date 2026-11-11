@@ -22,7 +22,8 @@ cd backend && uv run uvicorn app:app --reload --port 8000   # manual start
 - Needs `ANTHROPIC_API_KEY` in `starting-codebase/.env` (loaded by `python-dotenv` in `backend/config.py`).
 - UI at http://localhost:8000, API docs at http://localhost:8000/docs.
 - The server must be started from `backend/` because `app.py` uses relative paths (`../docs`, `../frontend`, `./chroma_db`).
-- There are no tests, linter or build step configured.
+- Code quality: `./scripts/format.sh` auto-formats with black (config in `pyproject.toml`); `./scripts/check.sh` verifies formatting (`black --check`) and runs pytest. Run `format.sh` before committing.
+- There is no linter or build step configured.
 
 ## Architecture
 
