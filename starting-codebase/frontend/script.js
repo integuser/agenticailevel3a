@@ -29,7 +29,8 @@ function setupEventListeners() {
         if (e.key === 'Enter') sendMessage();
     });
     
-    
+    document.getElementById('newChatButton').addEventListener('click', startNewChat);
+
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -167,6 +168,21 @@ function escapeHtml(text) {
 }
 
 // Removed removeMessage function - no longer needed since we handle loading differently
+
+// Discard the current session on the backend, then reset the UI (no page reload)
+function startNewChat() {
+    const oldSessionId = currentSessionId;
+    if (oldSessionId) {
+        // Fire-and-forget; keepalive lets it finish even if the user navigates away
+        fetch(`${API_URL}/session/${encodeURIComponent(oldSessionId)}`, {
+            method: 'DELETE',
+            keepalive: true
+        }).catch(err => console.error('Failed to delete session:', err));
+    }
+    createNewSession();
+    chatInput.value = '';
+    chatInput.focus();
+}
 
 async function createNewSession() {
     currentSessionId = null;
