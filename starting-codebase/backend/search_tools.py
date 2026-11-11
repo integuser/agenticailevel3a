@@ -1,3 +1,4 @@
+import json
 from typing import Dict, Any, Optional, Protocol
 from abc import ABC, abstractmethod
 from vector_store import VectorStore, SearchResults
@@ -122,6 +123,54 @@ class CourseSearchTool(Tool):
         self.last_sources = sources
         
         return "\n\n".join(formatted)
+
+class CourseOutlineTool(Tool):
+    """Tool for retrieving a course outline (title, link, lesson list) from the course catalog"""
+
+    def __init__(self, vector_store: VectorStore):
+        self.store = vector_store
+
+    def get_tool_definition(self) -> Dict[str, Any]:
+        return {
+            "name": "get_course_outline",
+            "description": "Get the outline of a course: course title, course link, and the complete list of lessons (number and title)",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "course_title": {
+                        "type": "string",
+                        "description": "Course title (partial matches work, e.g. 'MCP', 'Introduction')"
+                    }
+                },
+                "required": ["course_title"]
+            }
+        }
+
+    def execute(self, course_title: str) -> str:
+        resolved = self.store._resolve_course_name(course_title)
+        if not resolved:
+            return f"No course found matching '{course_title}'."
+
+        try:
+            results = self.store.course_catalog.get(ids=[resolved])
+        except Exception as e:
+            return f"Error retrieving course outline: {e}"
+
+        if not results or not results.get('metadatas'):
+            return f"No course found matching '{course_title}'."
+
+        meta = results['metadatas'][0]
+        lessons = json.loads(meta.get('lessons_json') or "[]")
+
+        lines = [
+            f"Course: {meta.get('title', resolved)}",
+            f"Link: {meta.get('course_link') or 'N/A'}",
+            f"Lessons ({len(lessons)}):",
+        ]
+        for lesson in lessons:
+            lines.append(f"{lesson.get('lesson_number')}. {lesson.get('lesson_title')}")
+        return "\n".join(lines)
+
 
 class ToolManager:
     """Manages available tools for the AI"""

@@ -32,14 +32,15 @@ FastAPI backend (`backend/`) that also serves the static frontend (`frontend/`) 
 
 Key design points that span multiple files:
 
-- **Retrieval is tool-based, not automatic.** Claude decides whether to call the `search_course_content` tool (params: `query`, optional `course_name`, `lesson_number`). `AIGenerator` makes up to two Claude calls: the first with tools, and if it returns `tool_use`, a second without tools that carries the tool results. The system prompt limits it to one search per query. Only one tool round is handled.
+- **Retrieval is tool-based, not automatic.** Claude decides whether to call the `search_course_content` tool (params: `query`, optional `course_name`, `lesson_number`). `AIGenerator` runs a bounded loop of up to `MAX_TOOL_ROUNDS=2` sequential tool rounds (e.g. outline, then content search), with `messages` growing across rounds. Tools stay attached until the last round, or are dropped early if a tool raises (the error is returned as an `is_error` `tool_result`). If the final response has no text, a fallback string is returned.
 - **Sources for the UI** are a side channel: `CourseSearchTool.last_sources` is filled during the search, then read and reset by `RAGSystem.query` after the response. If Claude doesn't search, `sources` is empty.
 - **Two Chroma collections** in `VectorStore`: `course_catalog` (one doc per course, id = title, used for fuzzy course-name resolution via vector search) and `course_content` (chunks, with `course_title`/`lesson_number` metadata used for `where` filters).
 - **Ingestion** happens at startup (`app.py` startup event → `add_course_folder("../docs")`). Existing courses are skipped, so editing a doc already ingested has no effect until `backend/chroma_db/` is cleared or `clear_existing=True` is used. `DocumentProcessor` expects this format: `Course Title:`, `Course Link:`, `Course Instructor:` on the first lines, then `Lesson N: title` markers with an optional `Lesson Link:` line. Text is chunked by sentence, with `CHUNK_SIZE=800` and `CHUNK_OVERLAP=100` characters.
 - **Chunk prefixes are inconsistent:** the last lesson's chunks all get a `Course <title> Lesson N content:` prefix, while earlier lessons only prefix the first chunk with `Lesson N content:` (`document_processor.py`).
 - **Sessions** are in-memory (`session_manager.py`), and history is limited to `MAX_HISTORY=2` messages.
-- **Settings** (model `claude-sonnet-4-20250514`, embedding model `all-MiniLM-L6-v2`, `MAX_RESULTS=5`, paths) are all in `backend/config.py`. Claude calls use `temperature=0` and `max_tokens=800`.
+- **Settings** (model `claude-sonnet-4-20250514`, embedding model `all-MiniLM-L6-v2`, `MAX_RESULTS=cd 5`, paths) are all in `backend/config.py`. Claude calls use `temperature=0` and `max_tokens=800`.
 
 ## Diagrams
 
 Per `.github/instructions/mermaid.instructions.md`, write diagrams as `.mmd` files. The query-flow sequence diagram is at `starting-codebase/docs/query-flow.mmd`.
+
