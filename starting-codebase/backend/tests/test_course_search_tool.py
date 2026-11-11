@@ -16,9 +16,15 @@ def res(docs, metas):
 
 
 def test_format_and_sources():
-    tool, _ = make_tool(res(["a", "b"], [
-        {"course_title": "C", "lesson_number": 1},
-        {"course_title": "C", "lesson_number": 1}]))
+    tool, _ = make_tool(
+        res(
+            ["a", "b"],
+            [
+                {"course_title": "C", "lesson_number": 1},
+                {"course_title": "C", "lesson_number": 1},
+            ],
+        )
+    )
     out = tool.execute("q")
     assert "[C - Lesson 1]\na" in out and "[C - Lesson 1]\nb" in out
     assert tool.last_sources == [{"text": "C - Lesson 1", "url": "http://link"}]
@@ -37,8 +43,10 @@ def test_error_returned():
 
 def test_empty_message():
     tool, _ = make_tool(res([], []))
-    assert tool.execute("q", course_name="X", lesson_number=3) == \
-        "No relevant content found in course 'X' in lesson 3."
+    assert (
+        tool.execute("q", course_name="X", lesson_number=3)
+        == "No relevant content found in course 'X' in lesson 3."
+    )
 
 
 def test_lesson_zero_in_empty_message():
