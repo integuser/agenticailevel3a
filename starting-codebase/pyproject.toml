@@ -17,6 +17,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "black>=26.10.1",
+    "httpx>=0.28.1",
     "pytest>=9.2.0",
 ]
 
@@ -30,3 +31,8 @@ extend-exclude = '''
   | starting-ragchatbot-codebase-main
 )/
 '''
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+addopts = "-ra"
